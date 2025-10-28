@@ -1,0 +1,631 @@
+"""
+This is the source code of the IDE you are running.
+
+TODO: refactor html generation
+TODO: write helpers for body generation
+"""
+
+import webview
+import html
+import ast
+import sys
+
+def user_shell():
+    # let the user override things
+    scope = globals()
+    lines = []
+    running = True
+    while running:
+        try:
+            if lines:
+                line = input("...")
+            else:
+                line = input(">>>")
+        except EOFError as e:
+            running = False
+        else:
+            if line:
+                lines.append(line)
+            else:
+                try:
+                    exec("\n".join(lines), scope)
+                except Exception as e:
+                    print(e)
+                finally:
+                    lines = []
+
+    # close everything
+    for w in webview.windows:
+        w.destroy()
+
+
+"""
+helpers to create DOM from an AST
+"""
+def render_module(module_node):
+    # unknown value
+    assert len(module_node.type_ignores) == 0
+    children = ["<div>"]
+    for elt in module_node.body:
+        # top-level strings are usually multiline
+        # TODO: refactor to make the logic more explicit
+        if isinstance(elt, ast.Expr) and isinstance(elt.value, ast.Constant) and isinstance(elt.value.value, str):
+            lines = elt.value.value.split("\n")
+            lines[0] = '"""' + lines[0]
+            lines[-1] += '"""'
+            lines = [line if line else "<br>" for line in lines]
+            lines = [f"<div>{line}</div>" for line in lines]
+            children.append("".join(lines))
+            # failed implementation
+            #rendered_text = elt.value.value.replace("\n", "</div><div>")
+            #print(rendered_text)
+            #print("\n" in rendered_text)
+            #children.append(f'<div>"""</div><div>{elt.value.value}</div><div>"""</div>')
+        else:
+            children.append(render_statement(elt))
+    children.append("</div>")
+    return "".join(children)
+
+
+def render_statement(node):
+    if isinstance(node, ast.Import):
+        return render_import(node)
+    elif isinstance(node, ast.FunctionDef):
+        return render_funcdef(node)
+    elif isinstance(node, ast.Expr):
+        return render_expr_statement(node)
+    elif isinstance(node, ast.With):
+        return render_with(node)
+    elif isinstance(node, ast.Assign):
+        return render_assign(node)
+    elif isinstance(node, ast.While):
+        return render_while(node)
+    elif isinstance(node, ast.For):
+        return render_for(node)
+    elif isinstance(node, ast.Assert):
+        return render_assert(node)
+    elif isinstance(node, ast.Return):
+        return render_return(node)
+    elif isinstance(node, ast.If):
+        return render_if(node)
+    elif isinstance(node, ast.Pass):
+        return render_pass(node)
+    elif isinstance(node, ast.Try):
+        return render_try(node)
+    elif isinstance(node, ast.Raise):
+        return render_raise(node)
+    elif isinstance(node, ast.AugAssign):
+        targ = render_expr(node.target)
+        op = render_binaryop(node.op)
+        val = render_expr(node.value)
+        return f"{targ} {op}= {val}"
+    else:
+        raise NotImplementedError(type(node))
+
+
+def render_import(import_node):
+    # TODO: support more than 1 import per statement
+    # use case: import (... as ..., ... as ...)
+    assert len(import_node.names) == 1
+    #for alias in import_node.names:
+    alias = import_node.names[0]
+    if alias.asname is not None:
+        return f"<div>import {alias.name} as {alias.asname}</div>"
+    else:
+        return f"<div>import {alias.name}</div>"
+def render_funcdef(funcdef_node):
+    n = funcdef_node
+    body = []
+    # TODO: find what this is
+    assert len(n.type_params) == 0
+    header = f"def {n.name}({render_arguments(n.args)}):"
+    for statement in n.body:
+        body.append(render_statement(statement))
+    # TODO: support decorators in function definitions
+    assert len(n.decorator_list) == 0
+    # never seen otherwise yet
+    assert n.returns is None
+    assert n.type_comment is None
+
+    header = f"<div>{header}</div>"
+    body = "".join(body)
+    body = f"<div style='margin-left: 30px'>{body}</div>"
+    return f"<div>{header}{body}</div>"
+def render_with(node):
+    body = "".join([render_statement(statement) for statement in node.body])
+    items = ", ".join([render_withitem(item) for item in node.items])
+    assert node.type_comment is None
+    header = f"<div>with {items}:</div>"
+    body = f"<div style='margin-left: 30px'>{body}</div>"
+    result = f"<div>{header}{body}</div>"
+    return result
+
+def render_withitem(node):
+    expr = render_expr(node.context_expr)
+    if node.optional_vars:
+        name = render_expr(node.optional_vars)
+        return f"{expr} as {name}"
+    else:
+        return expr
+
+
+def render_assign(assign_node):
+    targets = tuple([render_expr(t) for t in assign_node.targets])
+    value = render_expr(assign_node.value)
+    assert assign_node.type_comment is None
+    if len(targets) == 1:
+        return f"<div>{targets[0]} = {value}</div>"
+    else:
+        return f"<div>{tuple(targets)} = {value}</div>"
+def render_while(node):
+    test = render_expr(node.test)
+    body = [render_statement(statement) for statement in node.body]
+    else_body = [render_statement(statement) for statement in node.orelse]
+    header = f"<div>while {test}:</div>"
+    body = "".join(body)
+    body = f"<div style='margin-left: 30px'>{body}</div>"
+    return f"<div>{header}{body}</div>"
+def render_for(node):
+    target = render_expr(node.target)
+    it = render_expr(node.iter)
+    header = f"<div>for {target} in {it}:</div>"
+    body = [render_statement(statement) for statement in node.body]
+    body = "".join(body)
+    body = f"<div style='margin-left: 30px'>{body}</div>"
+
+    block = f"<div>{header}{body}</div>"
+
+    parts = [block]
+
+    if node.orelse:
+        else_header = f"<div>else:</div>"
+        else_body = [render_statement(statement) for statement in node.orelse]
+        else_body = "".join(else_body)
+        else_body = f"<div style='margin-left: 30px'>{else_body}</div>"
+        else_block = f"<div>{else_header}{else_body}</div>"
+        parts.append(else_block)
+
+    assert node.type_comment is None
+
+    result = "".join(parts)
+    return f"<div>{result}</div>"
+
+
+def render_assert(node):
+    # TODO: support assertion messages
+    assert node.msg is None
+    test = render_expr(node.test)
+    return f"<div>assert {test}</div>"
+def render_return(node):
+    if node.value is not None:
+        result = render_expr(node.value)
+        return f"<div>return {result}</div>"
+    else:
+        return ""
+def render_if(node):
+    # manual processing
+    # the Python AST represent elif branches as nested else: if
+    if is_elif(node):
+        #print("found elif")
+        return render_elifs(node)
+    test = render_expr(node.test)
+    body = [render_statement(s) for s in node.body]
+
+    if_header = f"<div>if {test}:</div>"
+    body = "".join(body)
+    body = f"<div style='margin-left: 30px'>{body}</div>"
+
+    ifpart = f"<div>{if_header}{body}</div>"
+
+    parts = [ifpart]
+
+    if node.orelse:
+        else_header = f"<div>else:</div>"
+        else_body = [render_statement(s) for s in node.orelse]
+        else_body = "".join(else_body)
+        else_body = f"<div style='margin-left: 30px'>{else_body}</div>"
+
+        elsepart = f"<div>{else_header}{else_body}</div>"
+        parts.append(elsepart)
+    return "".join(parts)
+
+# helpers for elifs
+def is_elif(if_node):
+    "return True if the if has an elif branch"
+    # if/elif gets compiled to if/else{if}
+    # if/elif/else gets compiled to if/else{if/else}
+    if len(if_node.orelse) != 1:
+        return False
+    return isinstance(if_node.orelse[0], ast.If)
+
+def elif_depth(if_node):
+    "return the number of elif branches in an if"
+    n = 0
+    while is_elif(if_node):
+        n += 1
+        if_node = if_node.orelse[0]
+    return n
+
+def collect_branches(if_node):
+    n = elif_depth(if_node)
+    branches = []
+    for i in range(n):
+        condition = if_node.test
+        body = if_node.body
+        branches.append((condition, body))
+        if_node = if_node.orelse[0]
+    # final else (not if) branch
+    if if_node.orelse:
+        assert not isinstance(if_node.orelse[0], ast.If)
+    # the last element is not a (cond, body) tuple
+    branches.append(if_node.orelse)
+    return branches
+
+def render_elifs(if_node):
+    branches = collect_branches(if_node)
+    if_branch, *elif_branches, else_body = branches
+
+
+    # if
+    if_test, if_body = if_branch
+    if_test = render_expr(if_test)
+    if_header = f"<div>if {if_test}:</div>"
+
+    if_body = [render_statement(s) for s in if_body]
+    if_body = "".join(if_body)
+    if_body = f"<div style='margin-left: 30px'>{if_body}</div>"
+
+    ifpart = f"<div>{if_header}{if_body}</div>"
+
+    parts = [ifpart]
+
+    # elifs
+    for (test, body) in elif_branches:
+        test = render_expr(test)
+        header = f"<div>elif {test}:</div>"
+        body = [render_statement(s) for s in body]
+        body = "".join(body)
+        body = f"<div style='margin-left: 30px'>{body}</div>"
+        part = f"<div>{header}{body}</div>"
+        parts.append(part)
+
+    # else
+    if else_body:
+        else_header = f"<div>else:</div>"
+        else_body = [render_statement(s) for s in else_body]
+        else_body = "".join(else_body)
+        else_body = f"<div style='margin-left: 30px'>{else_body}</div>"
+        elsepart = f"<div>{else_header}{else_body}</div>"
+        parts.append(elsepart)
+
+    return "".join(parts)
+    #return ifpart
+
+
+
+def render_pass(node):
+    return "<div>pass</div>"
+def render_try(node):
+    body = [render_statement(statement) for statement in node.body]
+    handlers = [render_except_handler(h) for h in node.handlers]
+    header = f"<div>try:</div>"
+
+    body = "".join(body)
+    body = f"<div style='margin-left: 30px'>{body}</div>"
+
+    parts = [header, body]
+
+    for h in handlers:
+        parts.append(h)
+
+    if node.orelse:
+        header = "<div>else:</div>"
+        else_body = [render_statement(statement) for statement in node.orelse]
+        else_body = "".join(else_body)
+        else_body = f"<div style='margin-left: 30px'>{else_body}</div>"
+        else_block = f"<div>{header}{else_body}</div>"
+        parts.append(else_block)
+
+    if node.finalbody:
+        header = "<div>finally:</div>"
+        final_body = [render_statement(statement) for statement in node.finalbody]
+        final_body = "".join(final_body)
+        final_body = f"<div style='margin-left: 30px'>{final_body}</div>"
+        final_block = f"<div>{header}{final_body}</div>"
+        parts.append(final_block)
+    result = "".join(parts)
+    return f"<div>{result}</div>"
+
+def render_except_handler(node):
+    error_type = render_expr(node.type)
+    body = [render_statement(statement) for statement in node.body]
+    header = f"<div>except {error_type} as {node.name}:</div>"
+    body = "".join(body)
+    body = f"<div style='margin-left: 30px'>{body}</div>"
+    return f"<div>{header}{body}</div>"
+
+def render_arguments(node):
+    result = ", ".join([render_arg(arg) for arg in node.args])
+    # TODO: support more cases
+    assert len(node.posonlyargs) == 0
+    assert len(node.kwonlyargs) == 0
+    assert len(node.kw_defaults) == 0
+    assert len(node.defaults) == 0
+    # flags (*args and **kwargs)
+    assert node.vararg is None
+    assert node.kwarg is None
+    return result
+def render_arg(arg):
+    # TODO: support argument type annotations
+    assert arg.annotation is None
+    assert arg.type_comment is None
+    # text metadata (not needed in a no-text IDE)
+    #print(arg.lineno)
+    #print(arg.col_offset)
+    #print(arg.end_lineno)
+    #print(arg.end_col_offset)
+    return arg.arg
+
+def render_raise(node):
+    # TODO: check if support is needed
+    assert node.cause is None
+    exc = render_expr(node.exc)
+    return f"<div>raise {exc}</div>"
+
+
+def render_expr_statement(node):
+    return f"<div>{render_expr(node)}</div>"
+
+
+"""
+expression rendering
+"""
+
+def render_cmpop(node):
+    if isinstance(node, ast.Eq):
+        return "=="
+    elif isinstance(node, ast.NotEq):
+        return "!="
+    elif isinstance(node, ast.Lt):
+        return html.escape("<")
+    elif isinstance(node, ast.LtE):
+        return html.escape("<=")
+    elif isinstance(node, ast.Gt):
+        return html.escape(">")
+    elif isinstance(node, ast.GtE):
+        return html.escape(">=")
+    elif isinstance(node, ast.Is):
+        return "is"
+    elif isinstance(node, ast.IsNot):
+        return "is not"
+    elif isinstance(node, ast.In):
+        return "in"
+    elif isinstance(node, ast.NotIn):
+        return "not in"
+    else:
+        raise NotImplementedError("unknown comparison operator")
+
+
+def render_unaryop(op):
+    if isinstance(op, ast.USub):
+        return "-"
+    elif isinstance(op, ast.UAdd):
+        return "+"
+    elif isinstance(op, ast.Not):
+        return "not "
+    elif isinstance(op, ast.Invert):
+        return "~"
+    else:
+        raise NotImplementedError("unknown unary operator")
+
+
+def render_binaryop(op):
+    if isinstance(op, ast.Add):
+        return "+"
+    elif isinstance(op, ast.Sub):
+        return "-"
+    elif isinstance(op, ast.Mult):
+        pass
+    elif isinstance(op, ast.Div):
+        pass
+    elif isinstance(op, ast.FloorDiv):
+        pass
+    elif isinstance(op, ast.Mod):
+        pass
+    elif isinstance(op, ast.Pow):
+        pass
+    elif isinstance(op, ast.LShift):
+        pass
+    elif isinstance(op, ast.RShift):
+        pass
+    elif isinstance(op, ast.BitOr):
+        pass
+    elif isinstance(op, ast.BitXor):
+        pass
+    elif isinstance(op, ast.BitAnd):
+        pass
+    elif isinstance(op, ast.MatMult):
+        pass
+    raise NotImplementedError(f"unknown binary operator: {op}")
+
+def render_boolop(op):
+    if isinstance(op, ast.And):
+        return "and"
+    elif isinstance(op, ast.Or):
+        return "or"
+    else:
+        raise NotImplementedError(f"unknown boolean operator: {op}")
+
+
+def render_keyword(node):
+    value = render_expr(node.value)
+    return f"{node.arg}={value}"
+
+def render_expr(node):
+    if isinstance(node, ast.Expr):
+        # nested Expr wrapper
+        return render_expr(node.value)
+    elif isinstance(node, ast.BoolOp):
+        op = render_boolop(node.op)
+        values = [render_expr(v) for v in node.values]
+        result = f" {op} ".join(values)
+        return result
+    #elif isinstance(node, ast.NamedExpr):
+    #    return "<span style='color: red'>TODO</span> named"
+    elif isinstance(node, ast.BinOp):
+        left = render_expr(node.left)
+        op = render_binaryop(node.op)
+        right = render_expr(node.right)
+        return f"{left} {op} {right}"
+    elif isinstance(node, ast.UnaryOp):
+        op = render_unaryop(node.op)
+        value = render_expr(node.operand)
+        return f"{op}{value}"
+    #elif isinstance(node, ast.Lambda):
+    #    return "<span style='color: red'>TODO</span> "
+    elif isinstance(node, ast.IfExp):
+        test = render_expr(node.test)
+        if_expr = render_expr(node.body)
+        else_expr = render_expr(node.orelse)
+        return f"{if_expr} if {test} else {else_expr}"
+    #elif isinstance(node, ast.Dict):
+    #    return "<span style='color: red'>TODO</span> "
+    #elif isinstance(node, ast.Set):
+    #    return "<span style='color: red'>TODO</span> "
+    elif isinstance(node, ast.ListComp):
+        expr = render_expr(node.elt)
+        generators = [render_comprehension(g) for g in node.generators]
+        generators = [f"for {g}" for g in generators]
+        # TODO: test with more than 1 generator
+        generators = " ".join(generators)
+        return f"[{expr} {generators}]"
+    #elif isinstance(node, ast.SetComp):
+    #    return "<span style='color: red'>TODO</span> "
+    #elif isinstance(node, ast.DictComp):
+    #    return "<span style='color: red'>TODO</span> "
+    #elif isinstance(node, ast.GeneratorExp):
+    #    return "<span style='color: red'>TODO</span> "
+    #elif isinstance(node, ast.Await):
+    #    return "<span  style='color: red'>TODO</span> "
+    #elif isinstance(node, ast.Yield):
+    #    return "<span style='color: red'>TODO</span> "
+    #elif isinstance(node, ast.YieldFrom):
+    #    return "<span style='color: red'>TODO</span> "
+    elif isinstance(node, ast.Compare):
+        # in python, comparisons can be complex sequences, like:
+        # 1 < x < y < 6
+        # 1 is called left
+        # the operators are [<, <, <]
+        # and the comparators are [x, y, 6]
+        left = render_expr(node.left)
+        operators = [render_cmpop(op) for op in node.ops]
+        comparators = [render_expr(cmp) for cmp in node.comparators]
+        items = [left]
+        for op, cmp in zip(operators, comparators):
+            items.append(op)
+            items.append(cmp)
+        return " ".join(items)
+    elif isinstance(node, ast.Call):
+        # positional args
+        args = [render_expr(arg) for arg in node.args]
+        # kwargs
+        args.extend([render_keyword(kw) for kw in node.keywords])
+        args = ", ".join(args)
+        func = render_expr(node.func)
+        return f"{func}({args})"
+    elif isinstance(node, ast.FormattedValue):
+        # TODO: support other values
+        # 97: !a, ascii
+        # 114: !r, repr() formatting
+        # 115: !s, string formatting
+        assert node.conversion == -1
+        # nested JoinedStr or None
+        assert node.format_spec is None
+        return render_expr(node.value)
+    #elif isinstance(node, ast.Interpolation):
+    #    return "<span style='color: red'>TODO</span> "
+    elif isinstance(node, ast.JoinedStr):
+        parts = []
+        for e in node.values:
+            if isinstance(e, ast.FormattedValue):
+                parts.append("{" + render_expr(e) + "}")
+            else:
+                # skip render_expr to avoid representing substrings with quotes
+                assert isinstance(e, ast.Constant)
+                assert isinstance(e.value, str)
+                parts.append(e.value)
+        string_result = "".join(parts)
+        return html.escape(repr(string_result))
+    #elif isinstance(node, ast.TemplateStr):
+    #    return "<span style='color: red'>TODO</span> "
+    elif isinstance(node, ast.Constant):
+        assert node.kind is None
+        # TODO: test carefully
+        # there could be other places where html can get by mistake
+        # html.escape() means we can't have html in the string literals of the edited source code
+        if isinstance(node.value, str):
+            return repr(html.escape(node.value))
+        else:
+            return repr(node.value)
+    elif isinstance(node, ast.Attribute):
+        obj = render_expr(node.value)
+        attr = node.attr
+        assert isinstance(node.ctx, ast.Load)
+        return f"{obj}.{attr}"
+    elif isinstance(node, ast.Subscript):
+        indexed = render_expr(node.value)
+        index = render_expr(node.slice)
+        # node.ctx is either ast.Load or ast.Store
+        # Store if the subscript is in a left side of an assignment
+        # Load if the subscript is in an expression to evaluate
+        return f"{indexed}[{index}]"
+    elif isinstance(node, ast.Starred):
+        #print(node.ctx)
+        expr = render_expr(node.value)
+        return f"*{expr}"
+    elif isinstance(node, ast.Name):
+        # the context can be Store (variable to store in, in assignment), Load (value to load), or Del (in del statements)
+        # never used here for now
+        #assert isinstance(node.ctx, ast.Store)
+        return node.id
+    elif isinstance(node, ast.List):
+        elts = [render_expr(expr) for expr in node.elts]
+        assert isinstance(node.ctx, ast.Load)
+        elts = ", ".join(elts)
+        return f"[{elts}]"
+    elif isinstance(node, ast.Tuple):
+        #print(node.ctx)
+        elts = [render_expr(elt) for elt in node.elts]
+        if len(elts) == 0:
+            return "(,)"
+        if len(elts) == 1:
+            return f"({elts[0]},)"
+        elts = ", ".join(elts)
+        return f"({elts})"
+    #elif isinstance(node, ast.Slice):
+    #    return "<span style='color: red'>TODO</span> "
+    else:
+        raise NotImplementedError(type(node))
+
+def render_comprehension(node):
+    target = render_expr(node.target)
+    it = render_expr(node.iter)
+    # TODO: support async
+    assert node.is_async == 0
+    # TODO: support conditions in comprehensions
+    assert len(node.ifs) == 0
+    #ifs = [render_expr(x) for x in node.ifs]
+    #print(ifs)
+    return f"{target} in {it}"
+
+
+webview.create_window("docs", "https://pywebview.flowrl.com")
+with open(sys.argv[0]) as f:
+    source = f.read()
+tree = ast.parse(source)
+html = render_module(tree)
+window = webview.create_window("test", html=html) #html="<p>text</p>")
+print("starting")
+webview.start(user_shell)
+
+
