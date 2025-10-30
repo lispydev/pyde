@@ -11,9 +11,15 @@ import ast
 import sys
 import code
 
+# test import
+import rendering.statement, rendering.expression
 
-import dom
-from dom import div, block
+from rendering import dom
+from rendering.dom import div_old as div, block
+
+#import rendering.statement, rendering.expression
+
+from rendering import statement, expression
 
 
 def on_load():
@@ -21,6 +27,15 @@ def on_load():
     with open("main.css") as f:
         css = f.read()
     window.load_css(css)
+
+    # parse the code again to render with window(.dom/document).create_element()
+    tree = ast.parse(source)
+    #doc = window.dom.document
+    #print(doc)
+    root = window.dom.create_element("<div id='root'></div>")
+    print(type(window.dom))
+    # TODO: try window.body
+    statement.render_module(window.dom, root, tree)
 
     # start the REPL
     code.InteractiveConsole(locals=globals()).interact()
@@ -100,7 +115,7 @@ def render_statement(node):
 def render_import(import_node):
     # TODO: support more than 1 import per statement
     # use case: import (... as ..., ... as ...)
-    assert len(import_node.names) == 1
+    #assert len(import_node.names) == 1
     #for alias in import_node.names:
     alias = import_node.names[0]
     if alias.asname is not None:
@@ -119,7 +134,7 @@ def render_importfrom(node):
     fragments = ", ".join(fragments)
     line = f"from {node.module} import {fragments}"
     assert node.level == 0
-    return line
+    return div(line)
 
 
 
@@ -137,17 +152,17 @@ def render_funcdef(funcdef_node):
     assert n.returns is None
     assert n.type_comment is None
 
-    header = f"<div>{header}</div>"
+    header = div(header)
     body = "".join(body)
-    body = f"<div style='margin-left: 30px'>{body}</div>"
-    return f"<div>{header}{body}</div>"
+    body = block(body)
+    return div(header + body)
 def render_with(node):
     body = "".join([render_statement(statement) for statement in node.body])
     items = ", ".join([render_withitem(item) for item in node.items])
     assert node.type_comment is None
-    header = f"<div>with {items}:</div>"
-    body = f"<div style='margin-left: 30px'>{body}</div>"
-    result = f"<div>{header}{body}</div>"
+    header = div(f"with {items}:")
+    body = block(body)
+    result = div(header + body)
     return result
 
 def render_withitem(node):
@@ -164,52 +179,52 @@ def render_assign(assign_node):
     value = render_expr(assign_node.value)
     assert assign_node.type_comment is None
     if len(targets) == 1:
-        return f"<div>{targets[0]} = {value}</div>"
+        target = targets[0]
+        return div(f"{target} = {value}")
     else:
-        return f"<div>{tuple(targets)} = {value}</div>"
+        return div(f"{tuple(targets)} = {value}")
+
 def render_while(node):
     test = render_expr(node.test)
     body = [render_statement(statement) for statement in node.body]
     else_body = [render_statement(statement) for statement in node.orelse]
-    header = f"<div>while {test}:</div>"
+    header = div(f"while {test}:")
     body = "".join(body)
-    body = f"<div style='margin-left: 30px'>{body}</div>"
-    return f"<div>{header}{body}</div>"
+    body = block(body)
+    return div(header + body)
 def render_for(node):
     target = render_expr(node.target)
     it = render_expr(node.iter)
-    header = f"<div>for {target} in {it}:</div>"
+    header = div(f"for {target} in {it}:")
     body = [render_statement(statement) for statement in node.body]
-    body = "".join(body)
-    body = f"<div style='margin-left: 30px'>{body}</div>"
+    body = dom.block("".join(body))
 
-    block = f"<div>{header}{body}</div>"
+    block = div(header + body)
 
     parts = [block]
 
     if node.orelse:
-        else_header = f"<div>else:</div>"
+        else_header = div("else:")
         else_body = [render_statement(statement) for statement in node.orelse]
-        else_body = "".join(else_body)
-        else_body = f"<div style='margin-left: 30px'>{else_body}</div>"
-        else_block = f"<div>{else_header}{else_body}</div>"
+        else_body = block("".join(else_body))
+        else_block = div(else_header + else_body)
         parts.append(else_block)
 
     assert node.type_comment is None
 
     result = "".join(parts)
-    return f"<div>{result}</div>"
+    return div(result)
 
 
 def render_assert(node):
     # TODO: support assertion messages
     assert node.msg is None
     test = render_expr(node.test)
-    return f"<div>assert {test}</div>"
+    return div(f"assert {test}")
 def render_return(node):
     if node.value is not None:
         result = render_expr(node.value)
-        return f"<div>return {result}</div>"
+        return div(f"return {result}")
     else:
         return ""
 def render_if(node):
@@ -221,11 +236,10 @@ def render_if(node):
     test = render_expr(node.test)
     body = [render_statement(s) for s in node.body]
 
-    if_header = f"<div>if {test}:</div>"
-    body = "".join(body)
-    body = f"<div style='margin-left: 30px'>{body}</div>"
+    if_header = div(f"if {test}:")
+    body = block("".join(body))
 
-    ifpart = f"<div>{if_header}{body}</div>"
+    ifpart = div(if_header + body)
 
     parts = [ifpart]
 
@@ -634,6 +648,10 @@ with open(sys.argv[0]) as f:
     source = f.read()
 tree = ast.parse(source)
 html = render_module(tree)
+#with open("main.css") as f:
+#    css = f.read()
+# embedding the css into the html makes it load before rendering
+#html = f"<style>{css}</style>{html}"
 window = webview.create_window("test", html=html) #html="<p>text</p>")
 print("starting")
 webview.start(on_load)

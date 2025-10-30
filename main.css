@@ -1,3 +1,38 @@
+/* base style unifier */
+/* divsoup with tailwind-like utility classes */
+
+div {
+	display: flex;
+	flex-direction: column;
+}
+
+.row {
+	flex-direction: row;
+	justify-items: center;
+	align-items: center;
+	gap: 5px;
+}
+
+/*.import */
+.import > div:not(:first-child) {
+	display: flex;
+	flex-direction: row;
+	/*gap: 5px;*/
+}
+.import > div:not(:first-child):has(+ div)::after {
+	content: ", ";
+}
+/*.import * {
+	display: flex;
+}
+.import > div {
+	background-color: rgb(0, 100, 0);
+}*/
+
+
+
+/* AST node styles */
+
 /*.if {
 }*/
 .block {
