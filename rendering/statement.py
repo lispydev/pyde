@@ -61,7 +61,7 @@ def render(dom: DOM, parent: Element, node: ast.stmt):
         case ast.Import:
             render_import(dom, parent, node)
         case ast.ImportFrom:
-            raise NotImplementedError("statement.render() not implemented for ast.ImportFrom")
+            render_importfrom(dom, parent, node)
 
         case ast.Global:
             raise NotImplementedError("statement.render() not implemented for ast.Global")
@@ -153,3 +153,23 @@ def render_alias(dom: DOM, parent: Element, node: ast.alias):
         text.text = f"{node.name} as {node.asname}"
     else:
         text.text = f"{node.name}"
+
+
+def render_importfrom(dom: DOM, parent: Element, node: ast.ImportFrom):
+    assert node.level == 0
+    elt = dom.create_element(div(), parent=parent)
+    register(node, elt)
+    elt.classes = ["importfrom", "row"]
+    text1 = dom.create_element(div(), elt)
+    text1.text = "from"
+    text2 = dom.create_element(div(), elt)
+    text2.text = node.module
+    text3 = dom.create_element(div(), elt)
+    text3.text = "import"
+    fragments_div = dom.create_element(div(), elt)
+    fragments_div.classes = ["row"]
+    for name in node.names:
+        render_alias(dom, fragments_div, name)
+
+
+
