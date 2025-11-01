@@ -49,9 +49,15 @@ def block(html=""):
 
 # TODO: add an easy wrapper for elt = dom.create_element(div, parent=parent); elt.classes = [...]; register(elt)
 # wrappers for Element creation, AST node registering and html class setup
-def add(parent: Element, cls: str | list):
+def add(parent: Element, cls: str | list = ""):
     elt = parent.append(div())
-    elt.classes = cls.split(" ") if isinstance(cls, str) else cls
+    if cls:
+        elt.classes = cls.split(" ") if isinstance(cls, str) else cls
+    return elt
+
+def add_text(parent: Element, text: str):
+    elt = add(parent)
+    elt.text = text
     return elt
 
 def add_node(parent: Element, node: AST, cls: str | list):
