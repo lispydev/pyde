@@ -14,7 +14,7 @@ from . import expression
 def render(dom: DOM, parent: Element, node: ast.stmt):
     match type(node):
         case ast.FunctionDef:
-            render_funcdef(dom, parent, node)
+            render_funcdef(parent, node)
         case ast.AsyncFunctionDef:
             raise NotImplementedError("statement.render() not implemented for ast.AsyncFunctionDef")
         case ast.ClassDef:
@@ -160,29 +160,23 @@ def render_importfrom(parent: Element, node: ast.ImportFrom):
     assert node.level == 0
     elt = add_node(parent, node, "importfrom row-nogap gap")
 
-    from_wrapper = add(elt, "from-prefix row-nogap gap")
-    from_field = add_text(from_wrapper, node.module)
+    # prefixed items need .row and .gap to space their prefix and content
+    from_prefixed = add(elt, "from-prefix row-nogap gap")
+    from_field = add_text(from_prefixed, node.module)
 
-    import_wrapper = add(elt, "import-prefix row-nogap gap")
-    aliases = add(import_wrapper, "aliases row-nogap comma-sep")
+    import_prefixed = add(elt, "import-prefix row-nogap gap")
+    aliases = add(import_prefixed, "aliases row-nogap comma-sep")
     for name in node.names:
         render_alias(aliases, name)
 
 
-def render_funcdef(dom: DOM, parent: Element, node: ast.FunctionDef):
+def render_funcdef(parent: Element, node: ast.FunctionDef):
     assert len(node.type_params) == 0
-    elt = dom.create_element(div(), parent=parent)
-    register(node, elt)
-    elt.classes = ["funcdef"]
-    header = dom.create_element(div(), parent=elt)
-    header.classes = ["header", "row-nogap", "block-header"]
-    funcname = dom.create_element(div(), header)
-    funcname.classes = ["name", "row-nogap", "gap", "def-prefix"]
-    funcname.text = node.name
-    params = dom.create_element(div(), header)
-    params.classes = ["parens", "row-nogap"]
-    params_content = dom.create_element(div(), params)
-    params_content.classes = ["comma-sep", "row-nogap"]
+    elt = add_node(parent, node, "funcdef")
+    header = add(elt, "header row-nogap block-header-suffix")
+    funcname = add(header, "name row-nogap gap def-prefix", node.name)
+    params = add(header, "parens row-nogap")
+    params_content = add(params, "comma-sep row-nogap")
     render_parameters(dom, params_content, node.args)
     return
 
