@@ -10,6 +10,9 @@ import html
 import ast
 import sys
 import code
+import os
+
+from types import ModuleType
 
 # test import
 import rendering.statement as statement, rendering.expression as expression
@@ -23,28 +26,35 @@ from rendering.dom import div_old as div, block
 
 from rendering import statement, expression
 
+def on_load2():
+    import time
+    while True:
+        print("test while")
+        time.sleep(1)
 
 def on_load():
-    # inject css into the code viewer
-    with open("main.css") as f:
-        css = f.read()
-    window.load_css(css)
+    print(code_window("main.py"))
+    ## inject css into the code viewer
+    #for name in ["main.css", "css/style.css", "css/syntax.css"]:
+    #    with open(name) as f:
+    #        css = f.read()
+    #    window.load_css(css)
 
-    # parse the code again to render with window(.dom/document).create_element()
-    tree = ast.parse(source)
-    #doc = window.dom.document
-    #print(doc)
-    root = window.dom.create_element("<div id='root'></div>")
-    print(type(window.dom))
-    # TODO: try window.body
-    statement.render_module(window.dom, root, tree)
+    ## parse the code again to render with window(.dom/document).create_element()
+    #tree = ast.parse(source)
+    ##doc = window.dom.document
+    ##print(doc)
+    #root = window.dom.create_element("<div id='root'></div>")
+    #print(type(window.dom))
+    ## TODO: try window.body
+    #statement.render_module(window.dom, root, tree)
 
     # start the REPL
-    code.InteractiveConsole(locals=globals()).interact()
+    #code.InteractiveConsole(locals=globals()).interact()
 
     # close everything
-    for w in webview.windows:
-        w.destroy()
+    #for w in webview.windows:
+    #    w.destroy()
 
 
 
@@ -110,6 +120,9 @@ def render_statement(node):
         op = render_binaryop(node.op)
         val = render_expr(node.value)
         return f"{targ} {op}= {val}"
+    elif isinstance(node, ast.ClassDef):
+        # TODO:
+        return ""
     else:
         raise NotImplementedError(type(node))
 
@@ -158,6 +171,7 @@ def render_funcdef(funcdef_node):
     body = "".join(body)
     body = block(body)
     return div(header + body)
+
 def render_with(node):
     body = "".join([render_statement(statement) for statement in node.body])
     items = ", ".join([render_withitem(item) for item in node.items])
@@ -378,7 +392,8 @@ def render_arguments(node):
     assert len(node.kw_defaults) == 0
     assert len(node.defaults) == 0
     # flags (*args and **kwargs)
-    assert node.vararg is None
+    # TODO: support this instead of ignoring it
+    #assert node.vararg is None
     assert node.kwarg is None
     return result
 def render_arg(arg):
@@ -596,7 +611,8 @@ def render_expr(node):
     elif isinstance(node, ast.Attribute):
         obj = render_expr(node.value)
         attr = node.attr
-        assert isinstance(node.ctx, ast.Load)
+        #print(node.ctx)
+        #assert isinstance(node.ctx, ast.Load)
         return f"{obj}.{attr}"
     elif isinstance(node, ast.Subscript):
         indexed = render_expr(node.value)
@@ -645,16 +661,62 @@ def render_comprehension(node):
     return f"{target} in {it}"
 
 
+
+def code_window(filepath):
+    with open(filepath) as f:
+        source = f.read()
+    title = os.path.basename(filepath)
+    module = ModuleType(title)
+    # TODO: use correct namespaces for packages to allow non-root imports
+    sys.modules[filepath] = module
+
+    tree = ast.parse(source)
+    # TODO: use the new renderer
+    html = render_module(tree)
+    def on_loaded():
+        print("loaded ?")
+    # def on_keydown(event):
+        # print(event["key"])
+    class API:
+        def key(self, k):
+            if k == "r":
+                code = compile(tree, "<ast>", "exec")
+                exec(code, module.__dict__)
+                #run_code(window)
+            elif k == "s":
+                start_shell(module)
+            print(k)
+    window = webview.create_window(title, html=html, js_api=API())
+    # inject css into the code viewer
+    for name in ["main.css", "css/style.css", "css/syntax.css"]:
+        with open(name) as f:
+            css = f.read()
+        window.load_css(css)
+    print("loaded css")
+    window.evaluate_js("""
+    document.body.addEventListener("keydown", (e) => {
+      pywebview.api.key(e.key)
+    })
+    """)
+    root = window.dom.create_element("<div id='root'></div>")
+    # window.dom.document.on("keydown", on_keydown)
+    # root.on("keydown", on_keydown)
+    # TODO: change signature of statement.render_module
+    statement.render_module(window.dom, root, tree)
+    window.events.loaded += on_loaded
+
+
+def start_shell(module):
+    code.InteractiveConsole(locals=module.__dict__).interact()
+
+
 webview.create_window("docs", "https://pywebview.flowrl.com")
-with open(sys.argv[0]) as f:
-    source = f.read()
-tree = ast.parse(source)
-html = render_module(tree)
-#with open("main.css") as f:
-#    css = f.read()
-# embedding the css into the html makes it load before rendering
-#html = f"<style>{css}</style>{html}"
-window = webview.create_window("test", html=html) #html="<p>text</p>")
+#with open(sys.argv[0]) as f:
+#    source = f.read()
+#tree = ast.parse(source)
+#html = render_module(tree)
+#window = webview.create_window("test", html=html) #html="<p>text</p>")
+#window.events.loaded += on_load2
 print("starting")
 webview.start(on_load)
 

@@ -5,18 +5,10 @@ things to know:
 - css is used to render syntax (comma separators, colons, identation, keywords,...)
 - most classes here are utility classes used by the statement/expression constructors in the renderer
 
-- if there is a way to include class styles in a css class, i will use it for semantic styling
+- if there is an easy way to include class styles in a css class (SASS inheritance), i will use it for semantic styling
 (semantic classes are already used for AST tagging)
 
 */
-
-
-/* base style unifier (everything is a flex div) */
-
-div {
-	display: flex;
-	flex-direction: column;
-}
 
 /*.row {
 	flex-direction: row;
@@ -25,9 +17,12 @@ div {
 	gap: 5px;
 }*/
 
+
+/*
+semantic css
+works great for isolation of side effects, but very verbose */
+
 /*.import */
-/* semantic css */
-/* works great for isolation of side effects, but very verbose */
 /*.import > div:not(:first-child) {
 	display: flex;
 	flex-direction: row;
@@ -48,42 +43,9 @@ div {
 }*/
 
 
-/* block prefix */
-.def-prefix::before {
-	content: "def";
-}
 
 
 /* helpers */
-.block-header-suffix::after {
-	content: ":";
-}
-.parens::before {
-	content: "(";
-}
-.parens::after {
-	content: ")";
-}
-/* "+ div" means: has a div as a next sibling */
-.comma-sep {
-	gap: 5px;
-}
-.comma-sep > div:has(+ div) {
-	display: flex;
-	flex-direction: row;
-}
-.comma-sep > div:has(+ div)::after {
-	content: ",";
-}
-
-/* TODO: replace .row with .row-nogap*/
-.row-nogap {
-	display: flex;
-	flex-direction: row;
-}
-.gap {
-	gap: 5px;
-}
 
 /* TODO: use simpler utility classes */
 .as-sep-no-gap > div:has(+ div)::after {
@@ -99,21 +61,6 @@ div {
 .as-sep, .as-sep > div:has(+ div) {
 	gap: 5px;
 }
-
-.import-prefix::before {
-	content: "import";
-}
-.import-prefix {
-	gap: 5px;
-}
-
-.from-prefix::before {
-	content: "from";
-}
-.from-prefix {
-	gap: 5px;
-}
-
 
 /* surround function parameters with ( ) and inline them */
 /* ", " separator between function parameters */

@@ -1,0 +1,23 @@
+/*
+utility classes used to describe style from python
+
+check the syntax.css file for classes related to the python syntax
+(comma separators, keyword prefix before statements, colons before blocks, indentation,...)
+*/
+
+
+/* style unifier (everything is a flex div) */
+
+div {
+  display: flex;
+  flex-direction: column;
+}
+
+/* minimal utility classes */
+.row {
+  flex-direction: row;
+}
+.gap {
+  gap: 5px;
+}
+

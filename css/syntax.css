@@ -1,0 +1,72 @@
+/* gaps are managed by the user */
+
+
+/* punctuation */
+
+.colon-suffix::after {
+	content: ":";
+}
+
+.parens::before {
+	content: "(";
+}
+.parens::after {
+	content: ")";
+}
+
+/*
+ TODO: (?) use a .comma-suffix class on every item instead of .comma-sep
+
+ .comma-sep either has side effects on child rendering,
+ or needs additional code (.gap on parent and .row on children)
+ to work properly
+
+ having side effects on children rendering creates unexpected surprises from elements not rendering properly and needing a wrapper
+ (but the wrapper could be abstracted with functions)
+
+ but .comma-suffix would also need micro-management of elements
+
+ */
+
+/* "+ div" means: has a div as a next sibling */
+.comma-separated {
+	gap: 5px;
+}
+/*.comma-sep > div:has(+ div) {
+	flex-direction: row;
+}*/
+.comma-sep > div:has(+ div)::after {
+	content: ",";
+}
+
+
+
+/* keyword prefixes */
+
+.def-prefix::before {
+	content: "def";
+}
+
+.with-prefix::before {
+	content: "with";
+}
+/*.with-prefix {
+	gap: 5px;
+}*/
+
+.import-prefix::before {
+	content: "import";
+}
+.import-prefix {
+	gap: 5px;
+}
+
+.from-prefix::before {
+	content: "from";
+}
+.from-prefix {
+	gap: 5px;
+}
+
+
+

@@ -57,15 +57,25 @@ def add(parent: Element, cls: str | list = None, text: str = None):
         elt.text = text
     return elt
 
+# TODO: deprecated, use add() instead
 def add_text(parent: Element, text: str):
     elt = add(parent)
     elt.text = text
     return elt
 
-def add_node(parent: Element, node: AST, cls: str | list):
-    elt = add(parent, cls)
+def add_node(parent: Element, node: AST, cls: str | list = None, text: str = None):
+    elt = add(parent, cls, text)
     register(node, elt)
     return elt
+
+# TODO: find an API to add children with wrapping divs
+
+#def add_managed_item(parent: Element, )
+    #def comma_separated_list(parent: Element):
+    #    elt = add(parent, "comma-sep")
+    #    return elt
+    #
+    #def add_item(lst, *args)
 
 #def add(parent, html):
 #    parent.append(html)

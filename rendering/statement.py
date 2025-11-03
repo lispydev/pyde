@@ -42,7 +42,7 @@ def render(dom: DOM, parent: Element, node: ast.stmt):
         case ast.If:
             raise NotImplementedError("statement.render() not implemented for ast.If")
         case ast.With:
-            raise NotImplementedError("statement.render() not implemented for ast.With")
+            return render_with(parent, node)
         case ast.AsyncWith:
             raise NotImplementedError("statement.render() not implemented for ast.AsyncWith")
 
@@ -121,15 +121,10 @@ def render(dom: DOM, parent: Element, node: ast.stmt):
 
 # TODO: find a place to put this function (main.py ?)
 # modules are not statements, they are top-level programs
-def render_module(dom, parent, node):
-    elt = dom.create_element(div(), parent=parent)
-    print(type(elt))
-    register(node, elt)
+def render_module(dom, parent: Element, node: ast.Module):
+    elt = add_node(parent, node)
     for stmt in node.body:
         render(dom, elt, stmt)
-    print(node.id)
-    print(elt)
-    print(node)
 
 
 """
@@ -137,18 +132,18 @@ AST statement node rendering
 """
 
 def render_import(parent: Element, node: ast.Import):
-    elt = add_node(parent, node, "import import-prefix row-nogap")
-    aliases = add(elt, "aliases row-nogap comma-sep")
+    elt = add_node(parent, node, "import import-prefix row")
+    aliases = add(elt, "aliases row comma-sep gap")
     for name in node.names:
-        #comma_separated_item = add(aliases, "row-nogap")
+        #comma_separated_item = add(aliases, "row")
         render_alias(aliases, name)
 
 # sub-part of import and importfrom nodes
 def render_alias(parent: Element, node: ast.alias):
-    elt = add_node(parent, node, "alias row-nogap")
+    elt = add_node(parent, node, "alias row")
     if node.asname is not None:
         # create an alias (div (div name) "as" (div asname))
-        alias = add(elt, "named-alias as-sep row-nogap")
+        alias = add(elt, "named-alias as-sep row")
         name = add_text(alias, node.name)
         asname = add_text(alias, node.asname)
     else:
@@ -158,14 +153,14 @@ def render_alias(parent: Element, node: ast.alias):
 
 def render_importfrom(parent: Element, node: ast.ImportFrom):
     assert node.level == 0
-    elt = add_node(parent, node, "importfrom row-nogap gap")
+    elt = add_node(parent, node, "importfrom row gap")
 
     # prefixed items need .row and .gap to space their prefix and content
-    from_prefixed = add(elt, "from-prefix row-nogap gap")
+    from_prefixed = add(elt, "from-prefix row gap")
     from_field = add_text(from_prefixed, node.module)
 
-    import_prefixed = add(elt, "import-prefix row-nogap gap")
-    aliases = add(import_prefixed, "aliases row-nogap comma-sep")
+    import_prefixed = add(elt, "import-prefix row gap")
+    aliases = add(import_prefixed, "aliases row comma-sep gap")
     for name in node.names:
         render_alias(aliases, name)
 
@@ -173,11 +168,11 @@ def render_importfrom(parent: Element, node: ast.ImportFrom):
 def render_funcdef(parent: Element, node: ast.FunctionDef):
     assert len(node.type_params) == 0
     elt = add_node(parent, node, "funcdef")
-    header = add(elt, "header row-nogap block-header-suffix")
-    funcname = add(header, "name row-nogap gap def-prefix", node.name)
-    params = add(header, "parens row-nogap")
-    params_content = add(params, "comma-sep row-nogap")
-    render_parameters(dom, params_content, node.args)
+    header = add(elt, "row colon-suffix")
+    funcname = add(header, "row gap def-prefix", node.name)
+    params = add(header, "parens row")
+    #params_content = add(params, "comma-sep row gap")
+    render_parameters(params, node.args)
     return
 
     n = node
@@ -197,7 +192,7 @@ def render_funcdef(parent: Element, node: ast.FunctionDef):
     return div(header + body)
 
 # sub-part of render_funcdef
-def render_parameters(dom: DOM, parent: Element, node: ast.arguments):
+def render_parameters(parent: Element, node: ast.arguments):
     # TODO: support more cases
     assert len(node.posonlyargs) == 0
     assert len(node.kwonlyargs) == 0
@@ -206,13 +201,15 @@ def render_parameters(dom: DOM, parent: Element, node: ast.arguments):
     # flags (*args and **kwargs)
     assert node.vararg is None
     assert node.kwarg is None
+    elt = add(parent, "comma-sep row gap")
     for param in node.args:
-        render_param(dom, parent, param)
+        comma_separated_item = add(elt, "row")
+        render_param(comma_separated_item, param)
     #result = ", ".join([render_arg(arg) for arg in node.args])
     #return result
 
 # sub-part of render_parameters
-def render_param(dom: DOM, parent: Element, node: ast.arg):
+def render_param(parent: Element, node: ast.arg):
     # TODO: support argument type annotations
     assert node.annotation is None
     assert node.type_comment is None
@@ -221,5 +218,39 @@ def render_param(dom: DOM, parent: Element, node: ast.arg):
     #print(arg.col_offset)
     #print(arg.end_lineno)
     #print(arg.end_col_offset)
-    elt = dom.create_element(div(), parent=parent)
-    elt.text = node.arg
+
+    # comma-separated items must be inlined,
+    # so that the comma is on the same line
+    elt = add_node(parent, node, "row", node.arg)
+
+
+def render_with(parent: Element, node: ast.With):
+    assert node.type_comment is None
+    elt = add_node(parent, node)
+    # this breaks if newlines are added for clarity:
+    #header = elt.append("""<div class="with-prefix colon-suffix row gap"></div>""")
+    header = add(elt, "with-prefix colon-suffix row gap")
+    print(header)
+    body = add(elt, "block")
+    for item in node.items:
+        render_withitem(header, item)
+    return
+    pass
+    body = "".join([render_statement(statement) for statement in node.body])
+    items = ", ".join([render_withitem(item) for item in node.items])
+    header = div(f"with {items}:")
+    body = block(body)
+    result = div(header + body)
+    return result
+
+def render_withitem(parent: Element, node: ast.withitem):
+    elt = add_node(parent, node)
+    if node.optional_vars:
+        # add "<expr> as <name>"
+        elt.classes.append("as-sep")
+        elt.classes.append("row")
+        expr = expression.render(elt, node.context_expr)
+        name = expression.render(elt, node.optional_vars)
+    else:
+        # just add <expr>
+        expr = expression.render(elt, node.context_expr)

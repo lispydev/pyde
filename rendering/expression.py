@@ -2,5 +2,5 @@
 expression rendering
 """
 
-def render(dom, parent, node):
+def render(parent, node):
     pass
