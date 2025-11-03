@@ -26,14 +26,10 @@ from rendering.dom import div_old as div, block
 
 from rendering import statement, expression
 
-def on_load2():
-    import time
-    while True:
-        print("test while")
-        time.sleep(1)
 
 def on_load():
-    print(code_window("main.py"))
+    win = CodeWindow("main.py")
+    #code_window("main.py")
     ## inject css into the code viewer
     #for name in ["main.css", "css/style.css", "css/syntax.css"]:
     #    with open(name) as f:
@@ -662,48 +658,56 @@ def render_comprehension(node):
 
 
 
-def code_window(filepath):
-    with open(filepath) as f:
-        source = f.read()
-    title = os.path.basename(filepath)
-    module = ModuleType(title)
-    # TODO: use correct namespaces for packages to allow non-root imports
-    sys.modules[filepath] = module
+class CodeWindow:
+    def __init__(self, filepath):
+        self.path = filepath
+        with open(self.path) as f:
+            self.source = f.read()
+        self.module_name = os.path.basename(filepath)
+        self.module = ModuleType(self.module_name)
+        
+        # TODO: use correct namespaces for packages to allow non-root imports
+        sys.modules[filepath] = self.module
 
-    tree = ast.parse(source)
-    # TODO: use the new renderer
-    html = render_module(tree)
-    def on_loaded():
-        print("loaded ?")
-    # def on_keydown(event):
-        # print(event["key"])
-    class API:
-        def key(self, k):
-            if k == "r":
-                code = compile(tree, "<ast>", "exec")
-                exec(code, module.__dict__)
-                #run_code(window)
-            elif k == "s":
-                start_shell(module)
-            print(k)
-    window = webview.create_window(title, html=html, js_api=API())
-    # inject css into the code viewer
-    for name in ["main.css", "css/style.css", "css/syntax.css"]:
-        with open(name) as f:
-            css = f.read()
-        window.load_css(css)
-    print("loaded css")
-    window.evaluate_js("""
-    document.body.addEventListener("keydown", (e) => {
-      pywebview.api.key(e.key)
-    })
-    """)
-    root = window.dom.create_element("<div id='root'></div>")
-    # window.dom.document.on("keydown", on_keydown)
-    # root.on("keydown", on_keydown)
-    # TODO: change signature of statement.render_module
-    statement.render_module(window.dom, root, tree)
-    window.events.loaded += on_loaded
+        # TODO: use the new renderer
+        self.tree = ast.parse(self.source)
+        self.html = render_module(self.tree)
+
+        # the API cannot have a CodeWindow as an attribute
+        # the constructor cannot have parameters
+        # closures are the only way to store self as the context of the API
+        # so this class has to be defined here
+        class CodeWindowAPI:
+            js_init = """
+            document.body.addEventListener("keydown", (e) => {
+            pywebview.api.keydown(e.key)
+            })
+            """
+
+            def keydown(_, key):
+                if key == "r":
+                    code = compile(self.tree, "<ast>", "exec")
+                    exec(code, self.module.__dict__)
+                elif key == "s":
+                    start_shell(self.module)
+                print(key)
+
+        self.api = CodeWindowAPI()
+        self.window = webview.create_window(self.module_name, html=self.html, js_api=self.api)
+
+        # this part needs pywebview to be started in order to run
+        # (will freeze if not started)
+
+        # inject css into the code viewer
+        for name in ["main.css", "css/style.css", "css/syntax.css"]:
+            with open(name) as f:
+                css = f.read()
+            self.window.load_css(css)
+        self.window.evaluate_js(self.api.js_init)
+        self.root = self.window.dom.create_element("<div id='root'></div>")
+        # will fail until the new renderer is complete
+        statement.render_module(self.root, self.tree)
+
 
 
 def start_shell(module):
@@ -711,12 +715,6 @@ def start_shell(module):
 
 
 webview.create_window("docs", "https://pywebview.flowrl.com")
-#with open(sys.argv[0]) as f:
-#    source = f.read()
-#tree = ast.parse(source)
-#html = render_module(tree)
-#window = webview.create_window("test", html=html) #html="<p>text</p>")
-#window.events.loaded += on_load2
 print("starting")
 webview.start(on_load)
 

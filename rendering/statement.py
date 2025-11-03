@@ -11,7 +11,7 @@ from .dom import register, div, block, add_node, add, add_text
 from . import expression
 
 
-def render(dom: DOM, parent: Element, node: ast.stmt):
+def render(parent: Element, node: ast.stmt):
     match type(node):
         case ast.FunctionDef:
             render_funcdef(parent, node)
@@ -121,10 +121,10 @@ def render(dom: DOM, parent: Element, node: ast.stmt):
 
 # TODO: find a place to put this function (main.py ?)
 # modules are not statements, they are top-level programs
-def render_module(dom, parent: Element, node: ast.Module):
+def render_module(parent: Element, node: ast.Module):
     elt = add_node(parent, node)
     for stmt in node.body:
-        render(dom, elt, stmt)
+        render(elt, stmt)
 
 
 """
