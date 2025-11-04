@@ -43,7 +43,7 @@ def render(parent: Element, node: ast.expr):
         case ast.YieldFrom:
             raise NotImplementedError('expression.render() not implemented for ast.YieldFrom')
         case ast.Compare:
-            raise NotImplementedError('expression.render() not implemented for ast.Compare')
+            render_compare(parent, node)
         case ast.Call:
             render_call(parent, node)
         case ast.FormattedValue:
@@ -57,7 +57,7 @@ def render(parent: Element, node: ast.expr):
         case ast.Constant:
             render_constant(parent, node)
         case ast.Attribute:
-            raise NotImplementedError('expression.render() not implemented for ast.Attribute')
+            render_attribute(parent, node)
         case ast.Subscript:
             raise NotImplementedError('expression.render() not implemented for ast.Subscript')
         case ast.Starred:
@@ -115,6 +115,44 @@ def render(parent: Element, node: ast.expr):
 #
 #
 
+def render_compare(parent: Element, node: ast.Compare):
+    # in python, comparisons can be complex sequences, like:
+    # 1 < x < y < 6
+    # 1 is called left
+    # the operators are [<, <, <]
+    # and the comparators are [x, y, 6]
+    elt = add_node(parent, node, "compare row gap")
+    left = render(elt, node.left)
+    for op, cmp in zip(node.ops, node.comparators):
+        add(elt, text=read_op(op))
+        render(elt, cmp)
+
+def read_op(op: ast.operator):
+    if isinstance(op, ast.Eq):
+        return "=="
+    elif isinstance(op, ast.NotEq):
+        return "!="
+    elif isinstance(op, ast.Lt):
+        return html.escape("<")
+    elif isinstance(op, ast.LtE):
+        return html.escape("<=")
+    elif isinstance(op, ast.Gt):
+        return html.escape(">")
+    elif isinstance(op, ast.GtE):
+        return html.escape(">=")
+    elif isinstance(op, ast.Is):
+        return "is"
+    elif isinstance(op, ast.IsNot):
+        return "is not"
+    elif isinstance(op, ast.In):
+        return "in"
+    elif isinstance(op, ast.NotIn):
+        return "not in"
+    else:
+        raise NotImplementedError("unknown comparison operator")
+
+
+
 
 # TODO: add more DOM encoding
 def render_call(parent: Element, node: ast.Call):
@@ -142,15 +180,20 @@ def render_constant(parent: Element, node: ast.Constant):
     if isinstance(node.value, str):
         # TODO: use the DOM to encode constant types
         # TODO: render multiline ("\n") strings with the multiline syntax if they are top-level in the module
+
+        # json encoding (not repr) is needed to go through the generated js code
         text = json.dumps(html.escape(node.value))
-        print(text)
-        # this line will use auto-generated js to set the text, and it seems pywebview forgot character escaping
-        #elt.text = text.replace("\\", "")
+        #print(text)
         elt.text = text
-        print(elt.text)
+        #print(elt.text)
     else:
         elt.text = repr(node.value)
         print(elt.text)
+
+def render_attribute(parent: Element, node: ast.Attribute):
+    elt = add_node(parent, node, "attribute row dot-sep")
+    render(elt, node.value)
+    add(elt, node.attr)
 
 def render_name(parent: Element, node: ast.Name):
     elt = add_node(parent, node, "symbol")

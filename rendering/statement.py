@@ -56,7 +56,7 @@ def render(parent: Element, node: ast.stmt):
         case ast.TryStar:
             raise NotImplementedError("statement.render() not implemented for ast.TryStar")
         case ast.Assert:
-            raise NotImplementedError("statement.render() not implemented for ast.Assert")
+            render_assert(parent, node)
 
         case ast.Import:
             render_import(parent, node)
@@ -130,6 +130,13 @@ def render_module(parent: Element, node: ast.Module):
 """
 AST statement node rendering
 """
+
+
+def render_assert(parent: Element, node: ast.Assert):
+    # TODO: support assertion messages
+    assert node.msg is None
+    elt = add_node(parent, node, "assert-prefix gap row")
+    expression.render(elt, node.test)
 
 def render_import(parent: Element, node: ast.Import):
     elt = add_node(parent, node, "import import-prefix row")
@@ -249,7 +256,6 @@ def render_with(parent: Element, node: ast.With):
 
 def render_assign(parent: Element, node: ast.Assign):
     assert node.type_comment is None
-    print("assign")
     elt = add_node(parent, node, "row equal-sep gap")
     variables = add(elt, "row gap")
     for t in node.targets:
