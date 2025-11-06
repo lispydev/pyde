@@ -10,6 +10,7 @@ import json
 
 from .dom import register, div, block, add_node, add, add_text
 
+
 def render(parent: Element, node: ast.expr):
     match type(node):
         case ast.BoolOp:
@@ -17,7 +18,7 @@ def render(parent: Element, node: ast.expr):
         case ast.NamedExpr:
             raise NotImplementedError('expression.render() not implemented for ast.NamedExpr')
         case ast.BinOp:
-            raise NotImplementedError('expression.render() not implemented for ast.BinOp')
+            render_binop(parent, node)
         case ast.UnaryOp:
             raise NotImplementedError('expression.render() not implemented for ast.UnaryOp')
         case ast.Lambda:
@@ -59,7 +60,7 @@ def render(parent: Element, node: ast.expr):
         case ast.Attribute:
             render_attribute(parent, node)
         case ast.Subscript:
-            raise NotImplementedError('expression.render() not implemented for ast.Subscript')
+            render_subscript(parent, node)
         case ast.Starred:
             raise NotImplementedError('expression.render() not implemented for ast.Starred')
         case ast.Name:
@@ -121,6 +122,45 @@ def render_boolop(parent: Element, node: ast.BoolOp):
     for v in node.values:
         # add(..., "row") is a wrapper required by the {op}-sep separator
         render(add(elt, "row gap"), v)
+
+
+def render_binop(parent: Element, node: ast.BinOp):
+    elt = add_node(parent, node, "row gap")
+    elt.classes.append(f"{read_binaryop(node.op)}-sep")
+    left = render(add(elt, "row"), node.left)
+    right = render(add(elt, "row"), node.right)
+
+def read_binaryop(op: ast.operator):
+    # css classes cannot have special characters like +
+    if isinstance(op, ast.Add):
+        return "plus"
+    elif isinstance(op, ast.Sub):
+        return "minus"
+    elif isinstance(op, ast.Mult):
+        pass
+    elif isinstance(op, ast.Div):
+        pass
+    elif isinstance(op, ast.FloorDiv):
+        pass
+    elif isinstance(op, ast.Mod):
+        pass
+    elif isinstance(op, ast.Pow):
+        pass
+    elif isinstance(op, ast.LShift):
+        pass
+    elif isinstance(op, ast.RShift):
+        pass
+    elif isinstance(op, ast.BitOr):
+        pass
+    elif isinstance(op, ast.BitXor):
+        pass
+    elif isinstance(op, ast.BitAnd):
+        pass
+    elif isinstance(op, ast.MatMult):
+        pass
+    raise NotImplementedError(f"unknown binary operator: {op}")
+
+
 
 def read_boolop(op: ast.boolop):
     if isinstance(op, ast.And):
@@ -199,7 +239,11 @@ def render_constant(parent: Element, node: ast.Constant):
         # json encoding (not repr) is needed to go through the generated js code
         # html escaping is already done by pywebview
         #text = json.dumps(html.escape(node.value))
-        text = json.dumps(node.value)
+        # print(node.value)
+        # text = json.dumps(node.value)
+        # pywebview uses JS eval to do things, which seems to break newline and quote escaping
+        text = json.dumps(node.value).replace("\\", "\\\\")
+        # print(text)
         elt.text = text
     else:
         elt.text = repr(node.value)
@@ -209,6 +253,15 @@ def render_attribute(parent: Element, node: ast.Attribute):
     elt = add_node(parent, node, "attribute row dot-sep")
     render(add(elt, "row"), node.value)
     add(elt, text=node.attr)
+
+def render_subscript(parent: Element, node: ast.Subscript):
+    # node.ctx is either ast.Load or ast.Store
+    # Store if the subscript is in a left side of an assignment
+    # Load if the subscript is in an expression to evaluate
+    elt = add_node(parent, node, "row")
+    indexed = render(elt, node.value)
+    bracketed = add(elt, "brackets row")
+    index = render(bracketed, node.slice)
 
 def render_name(parent: Element, node: ast.Name):
     elt = add_node(parent, node, "symbol")

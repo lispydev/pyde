@@ -113,4 +113,11 @@
 .or-sep > div:has(+ div)::after {
 	content: "or";
 }
+/* operator separators */
+.plus-sep > div:has(+ div)::after {
+	content: "+";
+}
+.minus-sep > div:has(+ div)::after {
+	content: "+";
+}
 
