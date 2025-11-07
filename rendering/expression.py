@@ -20,7 +20,7 @@ def render(parent: Element, node: ast.expr):
         case ast.BinOp:
             render_binop(parent, node)
         case ast.UnaryOp:
-            raise NotImplementedError('expression.render() not implemented for ast.UnaryOp')
+            render_unaryop(parent, node)
         case ast.Lambda:
             raise NotImplementedError('expression.render() not implemented for ast.Lambda')
         case ast.IfExp:
@@ -133,9 +133,9 @@ def render_binop(parent: Element, node: ast.BinOp):
 def read_binaryop(op: ast.operator):
     # css classes cannot have special characters like +
     if isinstance(op, ast.Add):
-        return "plus"
+        return "+"
     elif isinstance(op, ast.Sub):
-        return "minus"
+        return "-"
     elif isinstance(op, ast.Mult):
         pass
     elif isinstance(op, ast.Div):
@@ -159,6 +159,30 @@ def read_binaryop(op: ast.operator):
     elif isinstance(op, ast.MatMult):
         pass
     raise NotImplementedError(f"unknown binary operator: {op}")
+
+
+# TODO: go back to previous "operator separators" and replace them by DOM nodes
+# (operators have semantic meaning, they are not just syntax)
+# (keep the css for infix inlining if needed)
+def render_unaryop(parent: Element, node: ast.UnaryOp):
+    elt = add_node(parent, node, "row")
+    op = add(elt, text=read_unaryop(node.op))
+    value = render(elt, node.operand)
+
+
+def read_unaryop(op: ast.unaryop):
+    if isinstance(op, ast.USub):
+        return "-"
+    elif isinstance(op, ast.UAdd):
+        return "+"
+    elif isinstance(op, ast.Not):
+        return "not "
+    elif isinstance(op, ast.Invert):
+        return "~"
+    else:
+        raise NotImplementedError("unknown unary operator")
+
+
 
 
 

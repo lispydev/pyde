@@ -29,7 +29,7 @@ def render(parent: Element, node: ast.stmt):
         case ast.TypeAlias:
             raise NotImplementedError("statement.render() not implemented for ast.TypeAlias")
         case ast.AugAssign:
-            raise NotImplementedError("statement.render() not implemented for ast.AugAssign")
+            render_augassign(parent, node)
         case ast.AnnAssign:
             raise NotImplementedError("statement.render() not implemented for ast.AnnAssign")
 
@@ -250,6 +250,22 @@ def render_assign(parent: Element, node: ast.Assign):
     #    return div(f"{target} = {value}")
     #else:
     #    return div(f"{tuple(targets)} = {value}")
+
+
+# TODO: fix: the operator must be displayed
+# format: <node> <op>= <node>
+# <node><gap><op>=<gap><node>
+# (<node> (<op>=) <node>)
+def render_augassign(parent: Element, node: ast.AugAssign):
+    elt = add_node(parent, node, "row gap")
+    target = expression.render(add(elt), node.target)
+    assign_operator = add(elt, "equal-sep")
+    add(assign_operator, "row", expression.read_binaryop(node.op))
+    add(assign_operator)
+    #op = expression.read_binaryop(node.op)
+    #elt.classes.append(f"{op}-sep")
+    val = expression.render(add(elt), node.value)
+
 
 
 def render_for(parent: Element, node: ast.For):

@@ -118,6 +118,6 @@
 	content: "+";
 }
 .minus-sep > div:has(+ div)::after {
-	content: "+";
+	content: "-";
 }
 
