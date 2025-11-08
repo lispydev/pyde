@@ -48,11 +48,11 @@ def render(parent: Element, node: ast.expr):
         case ast.Call:
             render_call(parent, node)
         case ast.FormattedValue:
-            raise NotImplementedError('expression.render() not implemented for ast.FormattedValue')
+            render_formatted_value(parent, node)
         # case ast.Interpolation:
         #     raise NotImplementedError('expression.render() not implemented for ast.Interpolation')
         case ast.JoinedStr:
-            raise NotImplementedError('expression.render() not implemented for ast.JoinedStr')
+            render_joinedstr(parent, node)
         # case ast.TemplateStr:
         #     raise NotImplementedError('expression.render() not implemented for ast.TemplateStr')
         case ast.Constant:
@@ -124,6 +124,26 @@ def render_boolop(parent: Element, node: ast.BoolOp):
         render(add(elt, "row gap"), v)
 
 
+"""
+TODO: rewrite this code to use css classes for operator rendering and html for operator encoding
+
+example (only works on binary operators, not comparisons):
+<div class="operation" data-operator="+">
+  <div class="operand">a</div>
+  <div class="operand">b</div>
+</div>
+css:
+.operation {
+  --operator: attr(data-operator);
+}
+.operation > .operand:has(+ .operand)::after {
+  content: var(--operator);
+}
+or: (more efficient)
+.operation > .operand + .operand::before {
+  content: var(data-operator);
+}
+"""
 def render_binop(parent: Element, node: ast.BinOp):
     elt = add_node(parent, node, "row gap")
     elt.classes.append(f"{read_binaryop(node.op)}-sep")
@@ -285,6 +305,37 @@ def render_call(parent: Element, node: ast.Call):
         eq_separated = add(comma_separated, "equal-sep row")
         kw = add(eq_separated, text=kwarg.arg)
         render(eq_separated, kwarg.value)
+
+
+def render_formatted_value(parent: Element, node: ast.FormattedValue):
+    # TODO: support other conversion types:
+    # -1: unspecified (default is str())
+    # 97: !a, ascii
+    # 114: !r, repr() output
+    # 115: !s, str() output
+    assert node.conversion == -1
+    # can be a nested JoinedStr instead of None
+    # TODO: support this attribute
+    assert node.format_spec is None
+    elt = add_node(parent, node)
+    render(elt, node.value)
+
+
+# f"{x}<text>{y}"
+# f-"-({(<x>)}-(<json-encoded text>)-({<y>}))-"
+def render_joinedstr(parent: Element, node: ast.JoinedStr):
+    elt = add_node(parent, node, "row f-prefix")
+    quoted = add(elt, "quotes row")
+    for e in node.values:
+        if isinstance(e, ast.FormattedValue):
+            braced = add(quoted, "braces row")
+            render(braced, e)
+        else:
+            assert isinstance(e, ast.Constant)
+            assert isinstance(e.value, str)
+            # TODO: escape like in string formatting
+            add(quoted, text=e.value)
+            #parts.append(e.value)
 
 
 def render_constant(parent: Element, node: ast.Constant):

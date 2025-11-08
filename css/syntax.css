@@ -1,3 +1,4 @@
+@charset "UTF-8"
 /* gaps are managed by the user */
 
 
@@ -20,6 +21,21 @@
 .brackets::after {
 	content: "]";
 }
+
+.braces::before {
+	content: "{";
+}
+.braces::after {
+	content: "}";
+}
+
+.quotes::before {
+	content: open-quote;
+}
+.quotes::after {
+	content: close-quote;
+}
+
 
 /*
  TODO: (?) use a .comma-suffix class on every item instead of .comma-sep
@@ -88,6 +104,11 @@
 }
 .else-prefix::before {
 	content: "else";
+}
+
+/* f-string prefix */
+.f-prefix::before {
+	content: "f";
 }
 
 
