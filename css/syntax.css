@@ -123,6 +123,10 @@
 	content: "while";
 }
 
+.star-prefix::before {
+	content: "*";
+}
+
 
 /* separators */
 

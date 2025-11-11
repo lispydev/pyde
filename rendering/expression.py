@@ -62,7 +62,7 @@ def render(parent: Element, node: ast.expr):
         case ast.Subscript:
             render_subscript(parent, node)
         case ast.Starred:
-            raise NotImplementedError('expression.render() not implemented for ast.Starred')
+            render_starred(parent, node)
         case ast.Name:
             render_name(parent, node)
         case ast.List:
@@ -375,6 +375,12 @@ def render_subscript(parent: Element, node: ast.Subscript):
     bracketed = add(elt, "brackets row")
     index = render(bracketed, node.slice)
 
+
+def render_starred(parent: Element, node: ast.Name):
+    #print(node.ctx)
+    elt = add_node(parent, node, "star-prefix row")
+    render(elt, node.value)
+
 def render_name(parent: Element, node: ast.Name):
     elt = add_node(parent, node, "symbol")
     elt.text = node.id
@@ -396,10 +402,10 @@ def render_tuple(parent: Element, node: ast.List):
     elif len(node.elts) == 1:
         # display a single item with a comma after it
         comma_separated = add(elt, "comma-sep row")
-        render(comma_separated, node.elts[0])
+        render(add(comma_separated, "row"), node.elts[0])
         # empty element for the comma
         add(comma_separated)
     else:
         comma_separated = add(elt, "comma-sep row gap")
         for x in node.elts:
-            render(comma_separated, x)
+            render(add(comma_separated, "row"), x)
