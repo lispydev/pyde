@@ -301,11 +301,20 @@ def render_call(parent: Element, node: ast.Call):
         render(add(comma_separated, "row"), arg)
     # kwargs
     for kwarg in node.keywords:
-        # TODO: split the spacing from .equal-sep, not correct here
-        eq_separated = add(comma_separated, "equal-sep row")
-        kw = add(eq_separated, text=kwarg.arg)
-        render(eq_separated, kwarg.value)
+        render_keyword_arg(add(comma_separated, "row"), kwarg)
+        #eq_separated = add(comma_separated, "equal-sep row")
+        #kw = add(eq_separated, text=kwarg.arg)
+        #render(eq_separated, kwarg.value)
 
+# part of render_call(), also used by statement.render_class()
+def render_keyword_arg(parent: Element, node: ast.keyword):
+    elt = add_node(parent, node, "equal-sep row")
+    # TODO: use a wrapper for "row" ?
+    # not needed here because there is only text,
+    # but .equal-sep adds a ::before text content
+    # and using a wrapper div would unify the DOM conventions with the rest of the code
+    kw = add(elt, "row", text=node.arg)
+    render(elt, node.value)
 
 def render_formatted_value(parent: Element, node: ast.FormattedValue):
     # TODO: support other conversion types:
@@ -360,7 +369,9 @@ def render_constant(parent: Element, node: ast.Constant):
         # print(node.value)
         # text = json.dumps(node.value)
         # pywebview uses JS eval to do things, which seems to break newline and quote escaping
-        text = json.dumps(node.value).replace("\\", "\\\\")
+        #text = json.dumps(node.value).replace("\\", "\\\\")
+        # new fix imported from f-string (JoinedStr) tests
+        text = json.dumps(node.value).replace("\\", "\\\\").replace("'", "\\'")
         # print(text)
         elt.text = text
     else:

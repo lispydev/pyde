@@ -123,9 +123,14 @@
 	content: "while";
 }
 
+.class-prefix::before {
+	content: "class";
+}
+
 .star-prefix::before {
 	content: "*";
 }
+
 
 
 /* separators */

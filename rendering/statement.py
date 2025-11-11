@@ -18,7 +18,7 @@ def render(parent: Element, node: ast.stmt):
         case ast.AsyncFunctionDef:
             raise NotImplementedError("statement.render() not implemented for ast.AsyncFunctionDef")
         case ast.ClassDef:
-            raise NotImplementedError("statement.render() not implemented for ast.ClassDef")
+            render_classdef(parent, node)
         case ast.Return:
             render_return(parent, node)
 
@@ -244,6 +244,27 @@ def render_param(parent: Element, node: ast.arg):
     # so that the comma is on the same line
     elt = add_node(parent, node, "row", node.arg)
 
+def render_classdef(parent: Element, node: ast.ClassDef):
+    # TODO: support decorators
+    # TODO: support type_params
+    assert not node.decorator_list
+    elt = add_node(parent, node)
+    # header
+    colon_suffixed = add(elt, "row colon-suffix")
+    class_prefixed = add(colon_suffixed, "class-prefix row gap")
+    header_content = add(class_prefixed, "row")
+    name = add(header_content, text=node.name)
+    if node.keywords or node.bases:
+        paren_wrapped = add(header_content, "parens row")
+        arguments = add(paren_wrapped, "comma-sep row gap")
+        for kwarg in node.keywords:
+            expression.render_keyword_arg(add(arguments, "row"), kwarg)
+        for base in node.bases:
+            expression.render(add(arguments, "row"), base)
+
+    body = add(elt, "block")
+    for stmt in node.body:
+        render(body, stmt)
 
 def render_return(parent: Element, node: ast.Assign):
     elt = add_node(parent, node, "return-prefix row gap")
