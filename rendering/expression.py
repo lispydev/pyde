@@ -333,11 +333,13 @@ def render_joinedstr(parent: Element, node: ast.JoinedStr):
         else:
             assert isinstance(e, ast.Constant)
             assert isinstance(e.value, str)
-            # TODO: escape like in string formatting
-            text = json.dumps(e.value).replace("\\", "\\\\").replace("'","\\'")
+            # quotes are replaced because pywebview runs f"elt.textContent = '{text}'"
+            # which breaks if there is a single quote in the string
+            # and needs a second layer of escaping for everything that is escaped
+            # TODO: merge with literal string formatting
+            text = json.dumps(e.value).replace("\\", "\\\\").replace("'", "\\'")
             # remove quotes (and let the css quotes surround the whole f-string)
             text = text[1:-1]
-            print(text)
             add(quoted, text=text)
             #parts.append(e.value)
 
