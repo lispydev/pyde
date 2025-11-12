@@ -158,11 +158,12 @@ def render_alias(parent: Element, node: ast.alias):
     elt = add_node(parent, node, "alias row")
     if node.asname is not None:
         # create an alias (div (div name) "as" (div asname))
-        alias = add(elt, "named-alias as-sep row")
-        name = add_text(alias, node.name)
-        asname = add_text(alias, node.asname)
+        alias = add(elt, "import-alias as-sep row gap")
+        name = add_text(add(alias, "row gap"), node.name)
+        asname = add_text(add(alias, "row gap"), node.asname)
     else:
-        alias = add(elt, "unnamed-alias")
+        # TODO: find a class name for "unaliased import"
+        alias = add(elt)
         name = add_text(alias, node.name)
 
 
@@ -400,31 +401,27 @@ def render_with(parent: Element, node: ast.With):
     elt = add_node(parent, node)
     # this breaks if newlines are added for clarity:
     #header = elt.append("""<div class="with-prefix colon-suffix row gap"></div>""")
-    header = add(elt, "with-prefix colon-suffix row gap")
+    header = add(elt)
+    colon_suffixed = add(header, "row colon-suffix")
+    header_content = add(colon_suffixed, "with-prefix row gap")
     #print(header)
     body = add(elt, "block")
     for item in node.items:
-        render_withitem(header, item)
-    return
-    pass
-    body = "".join([render_statement(statement) for statement in node.body])
-    items = ", ".join([render_withitem(item) for item in node.items])
-    header = div(f"with {items}:")
-    body = block(body)
-    result = div(header + body)
-    return result
+        render_withitem(header_content, item)
+    for stmt in node.body:
+        render(body, stmt)
 
 def render_withitem(parent: Element, node: ast.withitem):
     elt = add_node(parent, node)
     if node.optional_vars:
         # add "<expr> as <name>"
-        elt.classes.append("as-sep")
-        elt.classes.append("row")
-        expr = expression.render(elt, node.context_expr)
-        name = expression.render(elt, node.optional_vars)
+        named = add(elt, "as-sep row gap")
+        expr = expression.render(add(named, "row gap"), node.context_expr)
+        name = expression.render(add(named, "row gap"), node.optional_vars)
     else:
         # just add <expr>
-        expr = expression.render(elt, node.context_expr)
+        unnamed = add(elt)
+        expr = expression.render(unnamed, node.context_expr)
 
 def render_pass(parent: Element, node: ast.Pass):
     elt = add_node(parent, node, text="pass")

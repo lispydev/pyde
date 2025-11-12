@@ -38,13 +38,13 @@ from rendering import statement, expression
 
 
 def on_load():
-    win = CodeWindow("main.py")
-    # start the REPL
-    #code.InteractiveConsole(locals=globals()).interact()
+    win_main = CodeWindow("main.py")
+    # TODO: test with more code examples
+    #win_test = CodeWindow("pytest.py")
+    #win_dom = CodeWindow("rendering/dom.py")
+    #win_expr = CodeWindow("rendering/expression.py")
+    #win_stmt = CodeWindow("rendering/statement.py")
 
-    # close everything
-    #for w in webview.windows:
-    #    w.destroy()
 
 
 
@@ -704,7 +704,7 @@ class CodeWindow:
         # (will freeze if not started)
 
         # inject css into the code viewer
-        for name in ["main.css", "css/style.css", "css/syntax.css"]:
+        for name in ["css/style.css", "css/syntax.css"]:
             with open(name) as f:
                 css = f.read()
             self.window.load_css(css)

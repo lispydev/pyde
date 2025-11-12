@@ -17,10 +17,17 @@ div {
 .row {
   flex-direction: row;
 }
+
 .gap {
   gap: 5px;
 }
 
+.block {
+	margin-left: 30px;
+}
+
+
+/* used during development to notice specific elements */
 .dbg-show {
   background-color: rgba(200,0,0, 0.5);
   min-width: 100px;

@@ -147,6 +147,7 @@
 .dot-sep > div:has(+ div)::after {
 	content: ".";
 }
+
 /* keyword separators */
 .in-sep > div:has(+ div)::after {
 	content: "in";
@@ -157,6 +158,11 @@
 .or-sep > div:has(+ div)::after {
 	content: "or";
 }
+.as-sep > div:has(+ div)::after {
+	content: "as";
+}
+
+
 /* operator separators */
 .plus-sep > div:has(+ div)::after {
 	content: "+";
