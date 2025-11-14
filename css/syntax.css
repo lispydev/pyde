@@ -164,20 +164,25 @@
 
 
 /* operator rendering */
-.operation {
+/*
+this code (defining a css variable with attr()) only works if the browser supports the CSS level 4 specification,
+which allows using attr() inside css variable definitions
+(which are inherited)
+
+Pywebview does not seem to support it even in the latest version
+(tested on pywebview==6.1 with pypy)
+
+To bypass this limitation, we set the attribute directly on the node with the css rule.
+
+In the meantime, we still set the data-operator attribute on the .operation Element even if it is not used.
+
+
+*/
+/*.operation {
 	--operator: attr(data-operator);
-}
+}*/
 .operation > div:has(+ div)::after {
   /*content: var(--operator);*/
-  content: "TODO OPERATOR";
+  content: attr(data-operator);
 }
 
-
-/* operator separators */
-/*.plus-sep > div:has(+ div)::after {
-	content: "+";
-}
-.minus-sep > div:has(+ div)::after {
-	content: "-";
-}
-*/

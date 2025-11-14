@@ -145,9 +145,27 @@ or: (more efficient)
 }
 """
 def render_binop(parent: Element, node: ast.BinOp):
-    elt = add_node(parent, node, "operation row gap dbg-show")
+    elt = add_node(parent, node, "operation row gap")
     elt.attributes["data-operator"] = read_binaryop(node.op)
-    left = render(add(elt, "row gap"), node.left)
+    operator_suffixed = add(elt, "row gap op-suffixed")
+    # note: setting css variables from the DOM API is a pain
+    # recent versions of pywebview do not have the same syntax for setting css properties
+
+    # this code works in every version, but very ugly
+    #webview.windows[1].evaluate_js(f"""
+    #document.getElementById('{node.node_id}').style.setProperty('--operator', '"+"')
+    #""")
+
+    # this does NOT work in cpython with apt-packaged pywebview, but almost
+    #operator_suffixed.style["--operator"] = f'\\"{read_binaryop(node.op)}\\"'
+
+    # this works in pypy with pip-packaged pywebview, but pywebview is complicated to install without distro packaging
+    #operator_suffixed.style["--operator"] = json.dumps(f'"{read_binaryop(node.op)}"')
+
+    # the easy solution is to never set css variables from python:
+    operator_suffixed.attributes["data-operator"] = read_binaryop(node.op)
+
+    left = render(operator_suffixed, node.left)
     right = render(add(elt, "row gap"), node.right)
 
 def read_binaryop(op: ast.operator):
