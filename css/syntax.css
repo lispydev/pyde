@@ -36,6 +36,14 @@
 	content: close-quote;
 }
 
+/* does not work */
+/*.triple-quotes::before {
+	content: open-quote open-quote open-quote;
+}
+.triple-quotes::after {
+	content: close-quote close-quote close-quote;
+}*/
+
 
 /*
  TODO: (?) use a .comma-suffix class on every item instead of .comma-sep

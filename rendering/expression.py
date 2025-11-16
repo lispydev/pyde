@@ -397,24 +397,40 @@ def render_joinedstr(parent: Element, node: ast.JoinedStr) -> Element:
 def render_constant(parent: Element, node: ast.Constant) -> Element:
     assert node.kind is None
     elt = add_node(parent, node, "literal")
-    # TODO: test carefully
-    # there could be other places where html can get by mistake
-    # html.escape() means we can't have html in the string literals of the edited source code
+    # TODO: test very carefully
+    # string rendering is very fragile, due to pywebview doing a double eval with JS code execution
+    # also make sure to check html escaping
+    # and make sure that the code works in later versions with pypy
+    # TODO: centralize string escaping to prevent debugging the same bugs in other places (f-strings, comparisons,...)
+
+    # tools available:
+    # -html.escape(), already done by pywebview
+    # -json.dumps(), for JS quotes escaping (repr will not work)
+    # -double escaping for the rest: .replace("\\", "\\\\")
+
     if isinstance(node.value, str):
         # TODO: use the DOM to encode constant types
         # TODO: render multiline ("\n") strings with the multiline syntax if they are top-level in the module
 
-        # json encoding (not repr) is needed to go through the generated js code
-        # html escaping is already done by pywebview
-        #text = json.dumps(html.escape(node.value))
-        # print(node.value)
         # text = json.dumps(node.value)
         # pywebview uses JS eval to do things, which seems to break newline and quote escaping
         #text = json.dumps(node.value).replace("\\", "\\\\")
         # new fix imported from f-string (JoinedStr) tests
         text = json.dumps(node.value).replace("\\", "\\\\").replace("'", "\\'")
-        # print(text)
         elt.text = text
+        # TODO: format multiline strings differently (""" """)
+        # does not work:
+        # (js eval replaces escaped "\n" by \n)
+        #text = json.dumps(node.value).replace("'", "\\'")
+        # remove quotes
+        #text = text[1:-1]
+        #if "\\n" in text:
+        #    c = "triple-quotes"
+        #else:
+        #    c = "quotes"
+        #pre = add_pre(elt, text)
+        #pre.classes.append("bg-red")
+        #elt.classes.append(c)
     else:
         elt.text = repr(node.value)
         #print(elt.text)
