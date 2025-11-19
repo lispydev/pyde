@@ -356,6 +356,10 @@ def render_while(parent: Element, node: ast.While) -> Element:
 
 def render_if(parent: Element, node: ast.If) -> Element:
     elt = add_node(parent, node)
+    # TODO: process elifs
+    if is_elif(node):
+        return render_elifs(elt, node)
+    #if_elt = add_n
     header = add(elt, "row colon-suffix")
     header_content = add(header, "row gap if-prefix")
     expression.render(header_content, node.test)
@@ -370,7 +374,6 @@ def render_if(parent: Element, node: ast.If) -> Element:
 
     return elt
 
-    # TODO: process elifs
 
     ## manual processing
     ## the Python AST represent elif branches as nested else: if
@@ -396,6 +399,82 @@ def render_if(parent: Element, node: ast.If) -> Element:
     #    elsepart = f"<div>{else_header}{else_body}</div>"
     #    parts.append(elsepart)
     #return "".join(parts)
+
+
+# helpers for elifs
+# internally, Python represents elifs as nested else: if:
+def is_elif(if_node: ast.If):
+    "return True if the if has an elif branch"
+    # if/elif gets compiled to if/else{if}
+    # if/elif/else gets compiled to if/else{if/else}
+    if len(if_node.orelse) != 1:
+        return False
+    return isinstance(if_node.orelse[0], ast.If)
+
+def elif_depth(if_node: ast.If):
+    "return the number of elif branches in an if"
+    n = 0
+    while is_elif(if_node):
+        n += 1
+        if_node = if_node.orelse[0]
+    return n
+
+def collect_branches(if_node: ast.If):
+    n = elif_depth(if_node)
+    branches = []
+    for i in range(n):
+        condition = if_node.test
+        body = if_node.body
+        branches.append((condition, body))
+        if_node = if_node.orelse[0]
+    # final else (not if) branch
+    if if_node.orelse:
+        assert not isinstance(if_node.orelse[0], ast.If)
+    # the last element is not a (cond, body) tuple
+    branches.append(if_node.orelse)
+    return branches
+
+def render_elifs(elt: Element, if_node: ast.If):
+    branches = collect_branches(if_node)
+    if_branch, *elif_branches, else_body = branches
+
+
+    # if
+    if_test, if_body = if_branch
+    if_elt = add(elt)
+    header = add(if_elt, "row colon-suffix")
+    header_content = add(header, "row gap if-prefix")
+    _if_test = expression.render(header_content, if_test)
+
+    body = add(if_elt, "block")
+    for stmt in if_body:
+        render(body, stmt)
+
+    # elifs
+    for (test, ast_body) in elif_branches:
+        elif_elt = add(elt)
+        header = add(elif_elt, "row colon-suffix")
+        header_content = add(header, "row gap elif-prefix")
+        _test = expression.render(header_content, test)
+        body = add(elif_elt, "block")
+        for stmt in ast_body:
+            render(body, stmt)
+
+    # else
+    if else_body:
+        else_elt = add(elt)
+        header = add(else_elt, "row colon-suffix")
+        header_content = add(header, "row gap else-prefix")
+        body = add(else_elt, "block")
+        for stmt in else_body:
+            render(body, stmt)
+
+    return elt
+
+
+
+
+
 
 def render_with(parent: Element, node: ast.With) -> Element:
     assert node.type_comment is None

@@ -110,6 +110,9 @@
 .if-prefix::before {
 	content: "if";
 }
+.elif-prefix::before {
+	content: "elif";
+}
 .else-prefix::before {
 	content: "else";
 }
