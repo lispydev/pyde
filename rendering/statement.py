@@ -356,10 +356,8 @@ def render_while(parent: Element, node: ast.While) -> Element:
 
 def render_if(parent: Element, node: ast.If) -> Element:
     elt = add_node(parent, node)
-    # TODO: process elifs
     if is_elif(node):
         return render_elifs(elt, node)
-    #if_elt = add_n
     header = add(elt, "row colon-suffix")
     header_content = add(header, "row gap if-prefix")
     expression.render(header_content, node.test)
@@ -373,32 +371,6 @@ def render_if(parent: Element, node: ast.If) -> Element:
             render(else_block, stmt)
 
     return elt
-
-
-    ## manual processing
-    ## the Python AST represent elif branches as nested else: if
-    #if is_elif(node):
-    #    #print("found elif")
-    #    return render_elifs(node)
-    #test = render_expr(node.test)
-    #body = [render_statement(s) for s in node.body]
-
-    #if_header = div(f"if {test}:")
-    #body = block("".join(body))
-
-    #ifpart = div(if_header + body)
-
-    #parts = [ifpart]
-
-    #if node.orelse:
-    #    else_header = f"<div>else:</div>"
-    #    else_body = [render_statement(s) for s in node.orelse]
-    #    else_body = "".join(else_body)
-    #    else_body = f"<div style='margin-left: 30px'>{else_body}</div>"
-
-    #    elsepart = f"<div>{else_header}{else_body}</div>"
-    #    parts.append(elsepart)
-    #return "".join(parts)
 
 
 # helpers for elifs
