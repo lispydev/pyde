@@ -83,43 +83,6 @@ def render(parent: Element, node: ast.stmt):
             raise ValueError(f"Unexpected ast statement type: {type(node)}")
 
 
-            #if isinstance(node, ast.Import):
-            #    return render_import(node)
-            #elif isinstance(node, ast.ImportFrom):
-            #    return render_importfrom(node)
-            #elif isinstance(node, ast.FunctionDef):
-            #    return render_funcdef(node)
-            #elif isinstance(node, ast.Expr):
-            #    return render_expr_statement(node)
-            #elif isinstance(node, ast.With):
-            #    return render_with(node)
-            #elif isinstance(node, ast.Assign):
-            #    return render_assign(node)
-            #elif isinstance(node, ast.While):
-            #    return render_while(node)
-            #elif isinstance(node, ast.For):
-            #    return render_for(node)
-            #elif isinstance(node, ast.Assert):
-            #    return render_assert(node)
-            #elif isinstance(node, ast.Return):
-            #    return render_return(node)
-            #elif isinstance(node, ast.If):
-            #    return render_if(node)
-            #elif isinstance(node, ast.Pass):
-            #    return render_pass(node)
-            #elif isinstance(node, ast.Try):
-            #    return render_try(node)
-            #elif isinstance(node, ast.Raise):
-            #    return render_raise(node)
-            #elif isinstance(node, ast.AugAssign):
-            #    targ = render_expr(node.target)
-            #    op = render_binaryop(node.op)
-            #    val = render_expr(node.value)
-            #    return f"{targ} {op}= {val}"
-            #else:
-            #    raise NotImplementedError(type(node))
-
-
 
 # TODO: find a place to put this function (main.py ?)
 # modules are not statements, they are top-level programs
@@ -318,7 +281,7 @@ def render_for(parent: Element, node: ast.For) -> Element:
     header = add(elt, "row colon-suffix")
     prefixed = add(header, "for-prefix in-sep row gap")
     # separators like in-sep need an additional div (add(elt)) to add the separator as a suffix of this wrapper div
-    target = expression.render(add(prefixed, ""), node.target)
+    target = expression.render(prefixed, node.target)
     iterator = expression.render(add(prefixed, "row gap"), node.iter)
 
     # TODO: WIP, debug later
