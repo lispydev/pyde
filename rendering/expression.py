@@ -159,10 +159,13 @@ def render_binop(parent: Element, node: ast.BinOp) -> Element:
     #operator_suffixed.style["--operator"] = json.dumps(f'"{read_binaryop(node.op)}"')
 
     # the easy solution is to never set css variables from python:
-    operator_suffixed.attributes["data-operator"] = read_binaryop(node.op)
-
-    left = render(operator_suffixed, node.left)
-    right = render(add(elt, "row gap"), node.right)
+    left = render(elt, node.left)
+    operator_prefixed = add(elt, "row gap")
+    operator_prefixed.attributes["data-operator"] = read_binaryop(node.op)
+    right = render(operator_prefixed, node.right)
+    #operator_suffixed.attributes["data-operator"] = read_binaryop(node.op)
+    #left = render(operator_suffixed, node.left)
+    #right = render(add(elt, "row gap"), node.right)
     return elt
 
 def read_binaryop(op: ast.operator):
@@ -193,8 +196,7 @@ def read_binaryop(op: ast.operator):
         raise NotImplementedError(f"unknown binary operator: {op}")
         pass
     elif isinstance(op, ast.BitOr):
-        raise NotImplementedError(f"unknown binary operator: {op}")
-        pass
+        return "|"
     elif isinstance(op, ast.BitXor):
         raise NotImplementedError(f"unknown binary operator: {op}")
         pass

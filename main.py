@@ -395,10 +395,9 @@ def render_arguments(node):
     assert node.kwarg is None
     return result
 def render_arg(arg):
-    # TODO: support argument type annotations
+    # TODO: support argument type annotations (implemented in the dynamic renderer)
     if arg.annotation is not None:
-        print("TODO: argument annotation")
-        print(arg.annotation)
+        pass
     assert arg.type_comment is None
     # text metadata (not needed in a no-text IDE)
     #print(arg.lineno)

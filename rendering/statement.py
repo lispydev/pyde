@@ -198,11 +198,6 @@ def render_parameters(parent: Element, node: ast.arguments) -> Element:
 
 # sub-part of render_parameters
 def render_param(parent: Element, node: ast.arg) -> Element:
-    # TODO: support argument type annotations
-    #assert node.annotation is None
-    if node.annotation is not None:
-        print("TODO: argument annotation")
-        print(node.annotation)
     assert node.type_comment is None
     # text metadata (not needed in a no-text IDE)
     #print(arg.lineno)
@@ -212,7 +207,13 @@ def render_param(parent: Element, node: ast.arg) -> Element:
 
     # comma-separated items must be inlined,
     # so that the comma is on the same line
-    elt = add_node(parent, node, "row", node.arg)
+    elt = add_node(parent, node, "row")
+    if node.annotation is None:
+        add(elt, text=node.arg)
+    else:
+        typed_group = add(elt, "row gap")
+        name = add(typed_group, "row colon-suffix", text=node.arg)
+        expression.render(typed_group, node.annotation)
     return elt
 
 def render_classdef(parent: Element, node: ast.ClassDef) -> Element:
