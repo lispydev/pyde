@@ -41,12 +41,12 @@ from rendering import statement, expression
 
 def on_load():
     # TODO: test with more code examples
+    win_expr = CodeWindow("rendering/expression.py")
     win_dom = CodeWindow("rendering/dom.py")
     win_main = CodeWindow("main.py")
     win_test = CodeWindow("pytest.py")
-    #win_expr = CodeWindow("rendering/expression.py")
-    #win_stmt = CodeWindow("rendering/statement.py")
 
+    win_stmt = CodeWindow("rendering/statement.py")
 
 
 
@@ -118,6 +118,9 @@ def render_statement(node):
     elif isinstance(node, ast.Nonlocal):
         # TODO:
         return ""
+    elif isinstance(node, ast.Match):
+        # TODO:
+        return ""
     else:
         raise NotImplementedError(type(node))
 
@@ -142,8 +145,7 @@ def render_importfrom(node):
             fragments.append(f"{alias.name} as {alias.asname}")
     # TODO: support multiline syntax if the fragments are too long
     fragments = ", ".join(fragments)
-    line = f"from {node.module} import {fragments}"
-    assert node.level == 0
+    line = f"from {node.level * '.'}{node.module} import {fragments}"
     return div(line)
 
 
@@ -160,7 +162,11 @@ def render_funcdef(funcdef_node):
     # TODO: support decorators in function definitions
     assert len(n.decorator_list) == 0
     # never seen otherwise yet
-    assert n.returns is None
+    # TODO: (done in the dynamic renderer)
+    #assert n.returns is None
+    if n.returns is not None:
+        print("TODO: returns in funcdef")
+        print(n.returns)
     assert n.type_comment is None
 
     header = div(header)
@@ -643,8 +649,8 @@ def render_expr(node):
             return f"({elts[0]},)"
         elts = ", ".join(elts)
         return f"({elts})"
-    #elif isinstance(node, ast.Slice):
-    #    return "<span style='color: red'>TODO</span> "
+    elif isinstance(node, ast.Slice):
+        return "<span style='color: red'>TODO</span> "
     else:
         raise NotImplementedError(type(node))
 
