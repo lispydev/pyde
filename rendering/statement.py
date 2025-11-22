@@ -230,13 +230,17 @@ def render_funcdef(parent: Element, node: ast.FunctionDef) -> Element:
     # TODO: wait for pypy to reach 3.12 or explicitely stop supporting pypy
     #assert len(node.type_params) == 0
     assert len(node.decorator_list) == 0
-    # never seen otherwise yet
-    assert node.returns is None
     assert node.type_comment is None
     elt = add_node(parent, node, "funcdef")
+
     header = add(elt, "row colon-suffix")
-    funcname = add(header, "row gap def-prefix", node.name)
-    params = add(header, "parens row")
+    spaced_signature = add(header, "row gap return-type-arrow-sep")
+    left = add(spaced_signature, "row")
+    funcname = add(left, "row gap def-prefix", node.name)
+    params = add(left, "parens row")
+    if node.returns is not None:
+        right = add(spaced_signature, "row gap")
+        expression.render(right, node.returns)
     #params_content = add(params, "comma-sep row gap")
     render_parameters(params, node.args)
     body = add(elt, "block")

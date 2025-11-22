@@ -177,6 +177,9 @@
 .as-sep > div + div::before {
 	content: "as";
 }
+.return-type-arrow-sep > div + div::before {
+	content: "->";
+}
 
 
 /* operator rendering */
