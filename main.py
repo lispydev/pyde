@@ -163,10 +163,8 @@ def render_funcdef(funcdef_node):
     assert len(n.decorator_list) == 0
     # never seen otherwise yet
     # TODO: (done in the dynamic renderer)
-    #assert n.returns is None
     if n.returns is not None:
-        print("TODO: returns in funcdef")
-        print(n.returns)
+        pass
     assert n.type_comment is None
 
     header = div(header)
