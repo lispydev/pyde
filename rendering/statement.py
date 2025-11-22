@@ -97,7 +97,7 @@ AST statement node rendering
 """
 
 def render_match(parent: Element, node: ast.Match):
-    elt = add_node(parent, node, "bg-red")
+    elt = add_node(parent, node)
     header = add(elt)
     colon_suffix = add(header, "colon-suffix row")
     match_prefix = add(colon_suffix, "match-prefix row gap")
@@ -124,6 +124,7 @@ def render_case(parent: Element, node: ast.match_case):
     for stmt in node.body:
         render(body, stmt)
 
+# TODO: implement missing cases
 def render_pattern(parent: Element, node: ast.pattern):
     match type(node):
         case ast.MatchValue:
@@ -147,6 +148,23 @@ def render_pattern(parent: Element, node: ast.pattern):
 
         case default:
             raise ValueError(f"Unexpected match pattern type: {type(node)}")
+
+
+def render_match_value(parent: Element, node: ast.MatchValue):
+    elt = add_node(parent, node)
+    expression.render(elt, node.value)
+
+def render_match_as(parent: Element, node: ast.MatchAs):
+    # TODO: support other cases
+    # case [x] as y:
+    # case default:     <--- the only kind used
+
+    # specific to case default:
+    assert node.pattern is None
+    assert node.name == "default"
+    elt = add_node(parent, node)
+    add_text(elt, node.name)
+    return elt
 
 
 
